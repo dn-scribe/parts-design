@@ -1,0 +1,116 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  # Manual "build everything" button - see the build-designs job below.
+  # Push/PR runs only rebuild designs whose files actually changed.
+  workflow_dispatch:
+
+jobs:
+  build-designs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history so the "changed designs" diff below has a real
+          # base commit to compare against - a shallow clone would only
+          # see the tip and force a full rebuild every time.
+          fetch-depth: 0
+
+      - name: Install FreeCAD
+        run: |
+          # Ubuntu dropped the "freecad" apt package from 24.04 (noble) -
+          # it's no longer in the archive at all ("has no installation
+          # candidate"), not a universe/PPA config issue. The snap is the
+          # officially supported install path now. The snap's CLI entry
+          # is `freecad.cmd`, not `freecadcmd` - wrapped (not just
+          # symlinked) below so the Makefile's own `command -v
+          # freecadcmd` detection (used everywhere else, including local
+          # dev) picks it up unmodified.
+          #
+          # The wrapper's `--` matters: `snap run` parses leading flags
+          # itself before forwarding to the app, and errors out on `-c`
+          # ("error: unknown flag `c'") since it doesn't recognize it as
+          # one of ITS OWN flags - a plain symlink to /snap/bin/freecad.cmd
+          # hits this immediately, since every design build passes
+          # `-c "..."` (see the $(DESIGNS) recipe in the Makefile). `--`
+          # tells `snap run` to stop parsing and forward everything after
+          # it to freecadcmd verbatim.
+          sudo snap install freecad
+          printf '#!/bin/sh\nexec /snap/bin/freecad.cmd -- "$@"\n' | sudo tee /usr/local/bin/freecadcmd >/dev/null
+          sudo chmod +x /usr/local/bin/freecadcmd
+
+      - name: Install Python deps (used by build scripts, e.g. GLB export)
+        run: python3 -m pip install -r requirements.txt --break-system-packages
+
+      - name: Determine which designs to build
+        id: designs
+        run: |
+          # workflow_dispatch is the manual "build everything" trigger -
+          # see the on.workflow_dispatch comment above.
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "targets=all" >> "$GITHUB_OUTPUT"
+            echo "Manual run (workflow_dispatch) - building all designs."
+            exit 0
+          fi
+
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base="${{ github.event.pull_request.base.sha }}"
+          else
+            base="${{ github.event.before }}"
+          fi
+
+          # First push of a new branch (base is all-zeros) or any other
+          # base we don't actually have history for - safest fallback is
+          # a full build rather than guessing.
+          if [ -z "$base" ] || ! git cat-file -e "$base" 2>/dev/null; then
+            echo "targets=all" >> "$GITHUB_OUTPUT"
+            echo "No usable base commit to diff against - building all designs."
+            exit 0
+          fi
+
+          changed=$(git diff --name-only "$base" HEAD)
+          echo "Changed files since $base:"
+          echo "$changed"
+
+          # Shared code/config affects every design - a change to any of
+          # it invalidates the whole "only what changed" optimization.
+          if echo "$changed" | grep -Eq '^(Makefile|requirements\.txt|scripts/)'; then
+            echo "targets=all" >> "$GITHUB_OUTPUT"
+            echo "Shared file changed (Makefile/requirements.txt/scripts/) - building all designs."
+            exit 0
+          fi
+
+          targets=$(echo "$changed" | grep -oE '^designs/[^/]+/' | sed -E 's#^designs/##; s#/$##' | sort -u | tr '\n' ' ')
+          echo "targets=$targets" >> "$GITHUB_OUTPUT"
+          if [ -z "$targets" ]; then
+            echo "No design files changed - nothing to build."
+          else
+            echo "Changed designs: $targets"
+          fi
+
+      - name: Build
+        if: steps.designs.outputs.targets != ''
+        run: |
+          if [ "${{ steps.designs.outputs.targets }}" = "all" ]; then
+            make all
+          else
+            make ${{ steps.designs.outputs.targets }}
+          fi
+
+      - name: Verify outputs exist
+        if: steps.designs.outputs.targets != ''
+        run: |
+          targets="${{ steps.designs.outputs.targets }}"
+          if [ "$targets" = "all" ]; then
+            targets=$(make list)
+          fi
+          for name in $targets; do
+            d="designs/$name"
+            if [ -z "$(ls -A "$d/outputs" 2>/dev/null)" ]; then
+              echo "::error::$name produced no outputs"
+              exit 1
+            fi
+          done

@@ -1,0 +1,8 @@
+# Python deps for design build scripts (installed into whatever Python
+# freecadcmd embeds/uses, and used by scripts/render_preview.py). FreeCAD's
+# own glTF exporter is Gui-only and unavailable headless, so designs that
+# need .glb output convert their STL with trimesh instead. matplotlib
+# renders the static outputs/preview.png used in READMEs.
+trimesh
+matplotlib
+numpy
