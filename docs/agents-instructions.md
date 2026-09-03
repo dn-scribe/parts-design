@@ -147,6 +147,57 @@ batch-safe scripting) before writing or editing a `generate.py`.
 (horizontal knob — built along Z natively, then `shape.rotate(App.Vector(0,0,0), App.Vector(0,1,0), 90)`
 reorients the axis to X). Reuse it for any new design that needs a hand-turned knob.
 
+**Screen-top bird family**: `build_screen_clip()` / `build_foot_tab()` / `emit_screen_bird()` in
+`scripts/freecad_common.py` are shared by [designs/screen-bird-perch](../designs/screen-bird-perch/),
+[screen-bird-peek](../designs/screen-bird-peek/), [screen-bird-roost](../designs/screen-bird-roost/)
+and [screen-bird-abstract](../designs/screen-bird-abstract/). Each of those folders is one *pose*
+of the same 2-part mechanism (a flat side-profile bird whose belly ends in a foot tab + a sprung
+C-clip that grips a monitor's top bezel and carries a through-slot socket for the tab); only the
+bird silhouette differs between folders. The tab↔socket numbers live once in `SCREEN_CLIP_FOOT` /
+`SCREEN_CLIP_SEAT_Z` (imported by every pose, `build_screen_clip()` warns if a `wall`/`boss_extra`
+change would move the seat off the constant). Silhouettes are built by fusing thin *solids*
+(`xz_face(...).extrude(...)`), not by merging coplanar faces — the latter is far more fragile in
+OCC and was dropping disconnected pieces silently. Add a new pose as its own folder + its own
+`generate.py` that only defines a `build_bird()` and calls `emit_screen_bird()`.
+
+[designs/screen-bird-clip-swivel](../designs/screen-bird-clip-swivel/) is a *turn-to-aim*
+alternative to the fixed clip: `build_screen_clip(socket=None)` gives a bare C-body,
+`build_swivel_clip()` tents the mouth ceiling (~37° V, so the two legs meet at a ridge with no
+bridge when printed legs-down), ~37°-cone-flares up to a **shallow open cup** (short vertical
+wall + flat floor + a thin raised spin ring), and `build_swivel_puck()` is a plain flat-bottomed
+slotted disc (just the `SCREEN_CLIP_FOOT` through-slot), so the *bird STL is unchanged*. The puck
+just drops in and spins on the ring - the wall stops it skating off, gravity holds it, no lip /
+snap / capture (an earlier version had a snap lip + OD groove; dropped - the inward lip is a
+marginal FDM overhang and the user only needs a rest-and-turn). Both parts print as-is via
+`_swivel_tuck()` (legs down / slot up); an overhang scan finds **0 mm²** needing support on
+either part (every downward face is ≤ ~40° or on the bed). Key sizing rules that keep it that
+way: `CLIP_WALL` = 7 (room for a <40° tent under a >=1 mm bridge cap), the tent cut runs past
+each mouth edge and dips below z=0 (no flat-ceiling sliver), and `_swivel_flare_base_r()` caps
+the cone's base to the largest circle inside the leg footprint (so its underside never hangs
+over the leg tops). `SCREEN_SWIVEL` holds the cup/puck numbers (`seat_fit` = radial clearance /
+friction). See `designs/screen-bird-clip-swivel/print-orientation.png` for the annotated slice. Note: OCC `makeChamfer` on a grooved cylinder here
+once *added* material - prefer a cone-ring cutter for edge breaks. Cross-imports
+`screen-bird-perch`'s `build_bird()` for the preview only, the same `sys.path` pattern the
+build-plate designs use for shared constants.
+
+[designs/samsung-c34-clip](../designs/samsung-c34-clip/) is for a monitor top edge that can't be
+clipped at all (measured on a Samsung C34H89x: a ~14.5 mm rounded bezel-less rail, body receding
+immediately behind). It does NOT clamp. `build_c34_folding_clip()` returns ONE flat solid, coplanar:
+`[back tail 50]-[web]-[saddle plate + build_swivel_cup()]-[tiny web]-[front flap 12]`. Print flat,
+then fold the back tail down ~100° (counterweight, drapes down the monitor back) and the front
+flap down ~110° (folds over the rail's front edge, stops the saddle sliding backward). The
+FRONT fold line is `rail_depth` itself; the cup sits entirely behind it (or folding the flap
+would tilt the cup), so `_c34_layout()` puts the cup back and the back fold behind the cup.
+Overhang scan: ~36 mm² of sub-mm slivers at the score lines (about to be creased) - no support.
+Rules the geometry encodes: webs are `web_t` 1.0 bottom-aligned strips; each tail/flap STOPS at
+its web edge (never reaches the fold zone) or the V-score cuts the 6 mm stock instead of the
+1 mm web; the score is offset ~1.8 mm into the pure web AWAY from the plate (via `plate_side`)
+so it can't bite the thick plate; the score prism is kept just inside the web width. `C34` holds
+the numbers; `RAIL_DEPTH` is the one to measure. (An earlier revision used a separate pinned
+saddle + tail; dropped for the one-piece living hinge. The lesson still stands: on a flat-part
+print, any feature hanging past the body footprint floats - verify with an STL overhang scan,
+not by eye.)
+
 **Prefer COTS hardware over a printed feature wherever a COTS part can do the same job more
 reliably** — not just for turnable-knob retention (below), as a general default. Two proven
 examples in this repo:
