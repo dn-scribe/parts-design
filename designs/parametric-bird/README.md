@@ -34,12 +34,12 @@ Two body versions are **always exported**, so you can print either:
 | Output | Pose |
 |---|---|
 | `bird_body` | **level** — arrow flying straight |
-| `bird_body_diving` | **head down** — neck + head + beak swung down `DIVE_ANGLE` (38°) about the neck root, aiming at food on the floor |
+| `bird_body_diving` | **leaning forward** — the whole fore-body (breast + neck + head + beak) pitches nose-down `DIVE_ANGLE` (28°) about a hinge at the front of the dorsal flat, bending as one continuous piece, like a bird stooping to feed off the floor |
 
-Everything aft of the neck root (body, tail, the dorsal flat the connector rides
-on) is identical in both, so the connector / wing assembly is unchanged.
-`BODY_POSE` (`"level"` / `"diving"`) only picks which body the `bird.*` preview
-shows.
+Everything aft of the hinge (back half of the body, tail, the dorsal flat the
+connector rides on) is identical in both, so the connector / wing assembly is
+unchanged. `BODY_POSE` (`"level"` / `"diving"`) only picks which body the
+`bird.*` preview shows.
 
 ## Spec
 
@@ -99,7 +99,7 @@ All in `generate.py` near the top. Below the two master knobs, sizes are written
 | `HEAD_LENGTH` / `HEAD_DIA` | head oval, along / across the spine | `34` / `13 × BODY_SCALE` |
 | `HEAD_REACH` / `HEAD_DROP` | head-centre X (frac of `a`) / Y (frac of `b`) | 0.98 / 0.35 |
 | `NECK_TAPER` | neck-root position along the head | 0.32 |
-| `DIVE_ANGLE` | head-down swing for `bird_body_diving` | 38.0 |
+| `DIVE_ANGLE` | fore-body lean-down angle for `bird_body_diving` | 28.0 |
 | `BEAK_LENGTH` / `BEAK_ROOT` | beak projection / height at the head | `18` / `6 × BODY_SCALE` |
 | `TAIL_LENGTH` / `TAIL_SPREAD` | tail projection / tip height (fletching) | `34` / `22 × BODY_SCALE` |
 | `EYE_DIA` | eye hole diameter | `2.4 × BODY_SCALE` |

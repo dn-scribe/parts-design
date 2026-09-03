@@ -90,7 +90,7 @@ THICKNESS = 3.2       # plaque / tongue / body-slab thickness for every part (mm
 # food on the floor). Both bodies are always exported (bird_body,
 # bird_body_diving); this only picks which one the bird.* preview shows.
 BODY_POSE = "diving"
-DIVE_ANGLE = 38.0     # degrees the head + neck + beak swing down when diving
+DIVE_ANGLE = 28.0     # degrees the whole fore-body (breast + neck + head) leans down
 
 # --- derived scale factors -------------------------------------------------
 # Base wing span is 100 mm at scale 1.0; the body and connector keep the same
@@ -299,23 +299,32 @@ def _rot_pt(p, pivot, ang_deg):
 
 
 def build_body(pose="level"):
-    """Flat side-profile body plaque. pose="level" is the arrow-straight bird;
-    pose="diving" swings the head + neck + beak down about the neck root by
-    DIVE_ANGLE, so the bird aims at the floor. Everything aft of the neck root
-    (body, tail, dorsal flat the connector rides on) is identical in both poses,
-    so the connector / wing assembly is unchanged."""
+    """Flat side-profile body plaque.
+
+    pose="level"  - the arrow-straight bird.
+    pose="diving" - the WHOLE fore-body leans down: everything forward of the
+                    connector station (breast, neck, head, beak) pitches
+                    nose-down DIVE_ANGLE about a hinge at the front of the
+                    dorsal flat, like a bird bending forward to feed off the
+                    floor. It bends as one continuous piece - not a detached
+                    head. Everything aft of the hinge (back half of the body,
+                    tail, the dorsal flat the connector rides on) is identical
+                    to the level pose, so the connector / wing assembly is
+                    unchanged.
+    """
     g = _body_geo()
     a, b, head_c = g["a"], g["b"], g["head_c"]
     hlx, hdy = HEAD_LENGTH / 2.0, HEAD_DIA / 2.0
     diving = (pose == "diving")
-    ang = -DIVE_ANGLE if diving else 0.0
-    pivot = (0.41 * a, 0.0)                       # neck root, on the body spine
+    # hinge just forward of the dorsal flat, low on the body (near the "legs"),
+    # so the fore-body bows forward-and-down rather than folding back
+    hinge = (g["back_x1"] + 0.03 * a, -0.40 * b)
 
-    def R(p):
-        return _rot_pt(p, pivot, ang) if diving else p
+    def bend(p):
+        return _rot_pt(p, hinge, -DIVE_ANGLE) if (diving and p[0] > hinge[0]) else p
 
-    ellipse = _poly_face([(a * math.cos(t), b * math.sin(t))
-                          for t in [2 * math.pi * i / 72 for i in range(72)]])
+    ellipse = _poly_face([bend((a * math.cos(t), b * math.sin(t)))
+                          for t in [2 * math.pi * i / 96 for i in range(96)]])
     tail = _poly_face([
         (-0.82 * a, 0.55 * b),
         (-a - TAIL_LENGTH, TAIL_SPREAD / 2.0),
@@ -323,22 +332,22 @@ def build_body(pose="level"):
         (-0.82 * a, -0.55 * b),
     ])
 
-    # head + beak, built level then swung down about the pivot for the dive
-    head = _poly_face([R(p) for p in _circle_pts(head_c[0], head_c[1], hlx, 56, ry=hdy)])
+    # head + beak - carried down with the fore-body by the same bend
+    head = _poly_face([bend(p) for p in _circle_pts(head_c[0], head_c[1], hlx, 56, ry=hdy)])
     beak_base_x = head_c[0] + hlx * math.cos(math.radians(38))
-    beak = _poly_face([R(p) for p in (
+    beak = _poly_face([bend(p) for p in (
         (head_c[0] + hlx + BEAK_LENGTH, head_c[1]),
         (beak_base_x, head_c[1] + BEAK_ROOT / 2.0),
         (beak_base_x, head_c[1] - BEAK_ROOT / 2.0),
     )])
 
-    # neck: wedge from the body front (fixed) to the head rear (follows the head)
+    # neck: body end fixed (aft of the hinge), head end carried down by the bend
     nx = head_c[0] - NECK_TAPER * HEAD_LENGTH
     neck = _poly_face([
-        (0.36 * a, 0.42 * b),
-        R((nx, head_c[1] + 0.30 * HEAD_DIA)),
-        R((nx, head_c[1] - 0.70 * HEAD_DIA)),
-        (0.46 * a, -0.60 * b),
+        bend((0.36 * a, 0.42 * b)),
+        bend((nx, head_c[1] + 0.30 * HEAD_DIA)),
+        bend((nx, head_c[1] - 0.70 * HEAD_DIA)),
+        bend((0.46 * a, -0.60 * b)),
     ])
 
     blob = ellipse.fuse([neck, head, beak, tail]).removeSplitter()
@@ -370,7 +379,7 @@ def build_body(pose="level"):
               file=sys.stderr)
         body = panel
 
-    eye = R((head_c[0] + HEAD_LENGTH * 0.20, head_c[1] + HEAD_DIA * 0.12))
+    eye = bend((head_c[0] + HEAD_LENGTH * 0.20, head_c[1] + HEAD_DIA * 0.12))
     body = body.cut(Part.makeCylinder(EYE_DIA / 2.0, BODY_THICKNESS + 2.0,
                                       App.Vector(eye[0], eye[1], -1.0)))
     body = _soften(body, WING_EDGE_R)   # skipped automatically if the lattice has too many edges
