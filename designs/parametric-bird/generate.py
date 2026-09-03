@@ -1,41 +1,47 @@
 """
-Parametric bird - a VERY simple decorative flying-bird model, five flat
-plaques that slot + glue into one spread-wing bird.
+Parametric bird - a VERY simple decorative flying-bird model, flat plaques
+that slot + glue into one spread-wing bird.
 
 Inspired by a balsa/wire ornithopter skeleton: everything is FLAT stock,
 nothing curved-in-3D, nothing that needs support.
 
-Four printed pieces, one mechanism:
+Printed pieces, one mechanism:
 
     bird_body        x1   side-profile silhouette - breast, neck, head,
                           pointed beak, tapered tail - pierced with a rib
                           lattice + eye hole. Its BACK is flattened into a
                           straight dorsal edge the connector rides on.
+                          Two versions are exported: bird_body (level, an
+                          arrow flying straight) and bird_body_diving (head
+                          swung down, aiming at food on the floor). Print
+                          whichever you want.
     bird_wing        x2   swept wing plaque with a rounded-square GRID
                           pattern (cells follow the planform so each row
                           runs parallel to the nearer edge) and a root
                           TONGUE that plugs into a connector slit. Print one
                           as modelled, print the second MIRRORED.
-    bird_connector   x1   saddle bracket with a rounded (filleted) core. A
-                          through slit in the bottom straddles the body's
-                          flat back; two arms rise at a shallow angle - one
-                          per side - each with a through slit that accepts
-                          one wing tongue (perpendicular, in cross-section,
-                          to the bottom slit). Bottom slit width tracks
+    bird_connector   x1   slim saddle bracket with a rounded core. A through
+                          slit in the bottom straddles the body's flat back;
+                          two thin arms rise at a shallow angle - one per
+                          side - each with a through slit that accepts one
+                          wing tongue (perpendicular, in cross-section, to
+                          the bottom slit). Bottom slit width tracks
                           BODY_THICKNESS, arm slit width tracks
                           WING_THICKNESS - real parametric fits.
 
 Assembly: push the connector down onto the flat back just behind the head
-(the bottom slit grips the 3 mm slab). Plug the right wing's tongue into the
-+Y arm slit and the left wing's tongue into the -Y arm slit (mirror the
-second wing). Both wings therefore share one station, X = const beside the
-head. A drop of glue in the bottom slit and each arm slit locks it; the
-wings' dihedral is set by the arm angle.
+(the bottom slit grips the slab). Plug the right wing's tongue into the +Y
+arm slit and the left wing's tongue into the -Y arm slit (mirror the second
+wing). Both wings therefore share one station, X = const beside the head. A
+drop of glue in the bottom slit and each arm slit locks it; the wings'
+dihedral is set by the arm angle.
 
-Sizing: the three *_SCALE factors at the top set the overall size. As shipped
-(WING_SCALE 3.0) a wing is ~320 x 108 mm and all four pieces fit on one
-350 x 350 Voron plate - the build prints each part's exported footprint. Set the
-scales to 1.0 for the original palm-size bird.
+Sizing: TWO master knobs at the top - WING_LENGTH (wing span, drives the
+whole model) and THICKNESS (every plaque / tongue / slab). WING_LENGTH 300
+gives a ~320 x 108 mm wing and all pieces fit one 350 x 350 Voron plate (the
+build prints each part's exported footprint). WING_LENGTH ~95 -> the original
+palm-size bird. BODY_POSE ("level" / "diving") picks which body the bird.*
+preview shows.
 
 Print orientation (all exported ready to print - no slicer rotation, no supports):
     bird_body, bird_wing - flat, largest face on the bed (z = 0).
@@ -51,7 +57,8 @@ Build via `make parametric-bird` from the repo root (freecadcmd does not
 auto-execute a bare .py file - see docs/agents-instructions.md).
 
 Outputs (default ./outputs relative to this script):
-    bird_body.{step,stl,glb}         printable, flat
+    bird_body.{step,stl,glb}         printable, flat (level pose)
+    bird_body_diving.{step,stl,glb}  printable, flat (head-down pose)
     bird_wing.{step,stl,glb}         printable, flat (print x2, one mirrored)
     bird_connector.{step,stl,glb}    printable, stand on a profile face (x1)
     bird.{stl,glb} + bird.FCStd      posed whole-bird preview (not printable)
@@ -67,30 +74,41 @@ import Part
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "scripts"))
 from freecad_common import export_glb, parse_outdir
 
-# ---------------------------------------------------------------------------
-# Parameters (mm, degrees)
-# ---------------------------------------------------------------------------
-#
-# Sized for a 350 mm Voron: WING_SCALE 3.0 gives a ~300 mm x ~100 mm wing, and
-# the body / connector scale with it. All four pieces (2 wings + body +
-# connector) fit on one 350 x 350 plate - the build prints each part's footprint
-# so you can confirm the arrangement. To shrink the whole model back down, just
-# lower the three *_SCALE factors (1.0 = the original palm-size bird).
+# ===========================================================================
+# MASTER PARAMETERS - the only two knobs you normally touch
+# ===========================================================================
+# WING_LENGTH sets the whole model's size; THICKNESS sets every plaque / tongue
+# / body-slab thickness. Everything below is derived from these two.
+#   WING_LENGTH 300, THICKNESS 3.2 -> ~320 x 108 mm wing, all four pieces fit
+#   one 350 x 350 Voron plate (the build prints each part's footprint).
+#   WING_LENGTH ~95 -> the original palm-size bird.
 
-WING_SCALE = 3.0
-BODY_SCALE = 2.2
-CONN_SCALE = 2.2
+WING_LENGTH = 300.0   # wing span, root edge to tip (mm)
+THICKNESS = 3.2       # plaque / tongue / body-slab thickness for every part (mm)
+
+# Head pose: "level" (arrow, flying straight) or "diving" (head down, aiming at
+# food on the floor). Both bodies are always exported (bird_body,
+# bird_body_diving); this only picks which one the bird.* preview shows.
+BODY_POSE = "diving"
+DIVE_ANGLE = 38.0     # degrees the head + neck + beak swing down when diving
+
+# --- derived scale factors -------------------------------------------------
+# Base wing span is 100 mm at scale 1.0; the body and connector keep the same
+# proportion to the wing they had before (2.2 : 3.0).
+WING_SCALE = WING_LENGTH / 100.0
+BODY_SCALE = WING_SCALE * (2.2 / 3.0)
+CONN_SCALE = WING_SCALE * (2.2 / 3.0)
 
 # --- Wing (one plaque; root edge on the Y axis, span +X, chord -Y) ----------
-WING_SPAN = 100.0 * WING_SCALE      # root edge to wing tip  (~300 mm)
-WING_ROOT_CHORD = 33.0 * WING_SCALE # front-to-back depth at the body  (~100 mm)
+WING_SPAN = 100.0 * WING_SCALE      # == WING_LENGTH
+WING_ROOT_CHORD = 33.0 * WING_SCALE # front-to-back depth at the body  (~0.33 * span)
 WING_TIP_CHORD = 5.0 * WING_SCALE   # front-to-back depth at the tip
 WING_TIP_LE_DROP = 14.0 * WING_SCALE  # tip leading edge set-back (keeps the plaque narrow)
 WING_LE_BOW = 10.0 * WING_SCALE     # forward bow of the leading edge at mid-span
 WING_TE_BOW = 0.22                  # trailing-edge lift, fraction of WING_ROOT_CHORD
-WING_THICKNESS = 3.2               # plaque thickness (also the tongue thickness) - not scaled
-WING_BORDER = 3.5                  # solid rim kept around the pattern
-WING_EDGE_R = 1.5                  # rounding on the wing / body outer edges
+WING_THICKNESS = THICKNESS          # plaque + tongue thickness
+WING_BORDER = 0.035 * WING_ROOT_CHORD  # solid rim around the pattern (~3.5% of chord)
+WING_EDGE_R = 0.5 * WING_SCALE      # rounding on the wing / body outer edges
 
 # Wing pattern: a rounded-square grid that follows the wing planform - rows run
 # spanwise (so each row is roughly parallel to whichever of the leading/trailing
@@ -98,20 +116,19 @@ WING_EDGE_R = 1.5                  # rounding on the wing / body outer edges
 GRID_COLS = 8            # pattern cells along the span
 GRID_ROWS = 4             # pattern cells across the chord
 GRID_FILL = 0.90         # hole size as a fraction of the local cell pitch
-GRID_CORNER = 2.5        # hole corner rounding radius, mm
+GRID_CORNER = 0.8 * WING_SCALE  # hole corner rounding radius, mm
 GRID_MARGIN_SPAN = 0.08  # span fraction kept solid at root and tip
 GRID_MARGIN_CHORD = 0.16 # chord fraction kept solid at the LE and TE
 
 TONGUE_DEPTH = 9.0 * CONN_SCALE     # how far the wing tongue enters the arm slit
-TONGUE_WIDTH = 26.0                 # tongue size along the root edge (<= CONN_SPINE)
 TONGUE_CHORD_FRAC = 0.5             # tongue position along the root chord (0 = LE, 1 = TE)
 
 # --- Body (side profile in XY: +X toward the beak, +Y up) ------------------
 # "arrow" read: narrow shaft, long stretched head/neck out front, fletched tail.
 BODY_LENGTH = 106.0 * BODY_SCALE   # body ellipse span (real beak-to-tail is longer)
 BODY_HEIGHT = 20.0 * BODY_SCALE    # breast to back - small for a narrow shaft
-BODY_THICKNESS = 3.8               # plaque thickness (bottom slit tracks this) - not scaled
-BODY_BORDER = 4.0
+BODY_THICKNESS = THICKNESS         # plaque thickness (bottom slit tracks this)
+BODY_BORDER = 0.09 * BODY_HEIGHT   # solid rim around the lattice
 HEAD_LENGTH = 34.0 * BODY_SCALE    # head stretched along the spine (an oval, not a ball)
 HEAD_DIA = 13.0 * BODY_SCALE       # head depth across the spine
 HEAD_REACH = 0.98         # head centre X as a fraction of the body semi-axis a
@@ -126,18 +143,26 @@ BODY_RIB_WIDTH = 1.7 * BODY_SCALE
 BACK_FLAT_LEN = 40.0 * BODY_SCALE  # length of the straight dorsal edge (connector rides here)
 
 # --- Connector (saddle; across = Y, up = Z, spine = X) --------------------
-CONN_SPINE = 12.0 * CONN_SCALE     # extent along the bird's spine
-SADDLE_HALF = 11.0 * CONN_SCALE    # half-width of the core in Y
-CORE_H = 13.0 * CONN_SCALE         # core height in Z
-STRADDLE_FIT = 0.5                 # added to BODY_THICKNESS for the bottom slit - not scaled
-STRADDLE_DEPTH = 8.0 * CONN_SCALE  # how far the bottom slit rises from Z = 0
+# Slimmed down: the core is just the two straddle legs (its width no longer
+# scales up faster than the slit it holds), and each arm is a thin plate whose
+# thickness tracks the wing slit instead of scaling.
+STRADDLE_FIT = 0.4                 # added to BODY_THICKNESS for the bottom slit
+SLIT_FIT = 0.4                     # added to WING_THICKNESS for the arm slit
+_SLIT_W = WING_THICKNESS + SLIT_FIT
+_STRADDLE_W = BODY_THICKNESS + STRADDLE_FIT
+
+CONN_SPINE = 12.0 * CONN_SCALE     # extent along the bird's spine (arm / slit width)
+STRADDLE_DEPTH = 6.0 * CONN_SCALE  # how far the bottom slit rises from Z = 0
+SADDLE_HALF = _STRADDLE_W / 2.0 + 4.5   # half core width = straddle leg only (not scaled)
+CORE_H = STRADDLE_DEPTH + 6.0     # slit depth + a roof tying the two legs together
 ARM_ELEV = 18.0                    # arm angle above horizontal = wing dihedral
-ARM_LEN = 17.0 * CONN_SCALE        # arm length along its own axis
-ARM_TZ = 6.0 * CONN_SCALE          # arm plate thickness (must exceed the wing slit width)
-ARM_ROOT_Z = 5.0 * CONN_SCALE      # Z where the arm centreline leaves the core side
-SLIT_FIT = 0.4                     # added to WING_THICKNESS for the arm slit - not scaled
+ARM_LEN = 17.0 * CONN_SCALE        # arm length (needs reach for the long wing root)
+ARM_TZ = _SLIT_W + 3.4            # thin arm plate: slit + ~1.7 mm wall each side
+ARM_ROOT_Z = STRADDLE_DEPTH * 0.55  # Z where the arm centreline leaves the core side
 SLIT_DEPTH = 11.0 * CONN_SCALE     # slit depth along the arm axis
-CORE_FILLET = 1.4 * CONN_SCALE     # rounding on the connector core edges
+CORE_FILLET = 1.0 * CONN_SCALE     # rounding on the connector core edges
+
+TONGUE_WIDTH = 0.85 * CONN_SPINE   # tongue size along the root edge (< CONN_SPINE)
 
 
 # ---------------------------------------------------------------------------
@@ -265,36 +290,55 @@ def _body_geo():
                 head_rear_x=head_rear_x, back_x0=back_x0, back_x1=back_x1, back_y=back_y)
 
 
-def build_body():
+def _rot_pt(p, pivot, ang_deg):
+    """Rotate point p about pivot by ang_deg (CCW, degrees)."""
+    a = math.radians(ang_deg)
+    dx, dy = p[0] - pivot[0], p[1] - pivot[1]
+    return (pivot[0] + dx * math.cos(a) - dy * math.sin(a),
+            pivot[1] + dx * math.sin(a) + dy * math.cos(a))
+
+
+def build_body(pose="level"):
+    """Flat side-profile body plaque. pose="level" is the arrow-straight bird;
+    pose="diving" swings the head + neck + beak down about the neck root by
+    DIVE_ANGLE, so the bird aims at the floor. Everything aft of the neck root
+    (body, tail, dorsal flat the connector rides on) is identical in both poses,
+    so the connector / wing assembly is unchanged."""
     g = _body_geo()
     a, b, head_c = g["a"], g["b"], g["head_c"]
     hlx, hdy = HEAD_LENGTH / 2.0, HEAD_DIA / 2.0
+    diving = (pose == "diving")
+    ang = -DIVE_ANGLE if diving else 0.0
+    pivot = (0.41 * a, 0.0)                       # neck root, on the body spine
+
+    def R(p):
+        return _rot_pt(p, pivot, ang) if diving else p
 
     ellipse = _poly_face([(a * math.cos(t), b * math.sin(t))
                           for t in [2 * math.pi * i / 72 for i in range(72)]])
-    # stretched oval head
-    head = _poly_face(_circle_pts(head_c[0], head_c[1], hlx, 56, ry=hdy))
-
-    # neck: a slim wedge bridging the body front to the underside of the head
-    nx = head_c[0] - NECK_TAPER * HEAD_LENGTH
-    neck = _poly_face([
-        (0.36 * a, 0.42 * b),
-        (nx, head_c[1] + 0.30 * HEAD_DIA),
-        (nx, head_c[1] - 0.70 * HEAD_DIA),
-        (0.46 * a, -0.60 * b),
-    ])
-
-    beak_base_x = head_c[0] + hlx * math.cos(math.radians(38))
-    beak = _poly_face([
-        (head_c[0] + hlx + BEAK_LENGTH, head_c[1]),
-        (beak_base_x, head_c[1] + BEAK_ROOT / 2.0),
-        (beak_base_x, head_c[1] - BEAK_ROOT / 2.0),
-    ])
     tail = _poly_face([
         (-0.82 * a, 0.55 * b),
         (-a - TAIL_LENGTH, TAIL_SPREAD / 2.0),
         (-a - TAIL_LENGTH, -TAIL_SPREAD / 2.0),
         (-0.82 * a, -0.55 * b),
+    ])
+
+    # head + beak, built level then swung down about the pivot for the dive
+    head = _poly_face([R(p) for p in _circle_pts(head_c[0], head_c[1], hlx, 56, ry=hdy)])
+    beak_base_x = head_c[0] + hlx * math.cos(math.radians(38))
+    beak = _poly_face([R(p) for p in (
+        (head_c[0] + hlx + BEAK_LENGTH, head_c[1]),
+        (beak_base_x, head_c[1] + BEAK_ROOT / 2.0),
+        (beak_base_x, head_c[1] - BEAK_ROOT / 2.0),
+    )])
+
+    # neck: wedge from the body front (fixed) to the head rear (follows the head)
+    nx = head_c[0] - NECK_TAPER * HEAD_LENGTH
+    neck = _poly_face([
+        (0.36 * a, 0.42 * b),
+        R((nx, head_c[1] + 0.30 * HEAD_DIA)),
+        R((nx, head_c[1] - 0.70 * HEAD_DIA)),
+        (0.46 * a, -0.60 * b),
     ])
 
     blob = ellipse.fuse([neck, head, beak, tail]).removeSplitter()
@@ -313,19 +357,24 @@ def build_body():
         struts.append(_strut_face((fx * a, -0.95 * b), (fx * a, 0.95 * b), BODY_RIB_WIDTH))
 
     panel = outline.extrude(App.Vector(0, 0, BODY_THICKNESS))
-    inner = _as_face(outline.makeOffset2D(-BODY_BORDER))
-    body = panel.cut(inner.extrude(App.Vector(0, 0, BODY_THICKNESS)))
-    for strut in struts:
-        clip = strut.extrude(App.Vector(0, 0, BODY_THICKNESS)).common(panel)
-        if clip.Volume > 1e-6:
-            body = body.fuse(clip)
-    body = body.removeSplitter()
+    try:
+        inner = _as_face(outline.makeOffset2D(-BODY_BORDER))
+        body = panel.cut(inner.extrude(App.Vector(0, 0, BODY_THICKNESS)))
+        for strut in struts:
+            clip = strut.extrude(App.Vector(0, 0, BODY_THICKNESS)).common(panel)
+            if clip.Volume > 1e-6:
+                body = body.fuse(clip)
+        body = body.removeSplitter()
+    except Exception as exc:  # noqa: BLE001 - degrade to a solid body, still printable
+        print("WARNING: body(%s) lattice offset failed (%s) - solid body" % (pose, exc),
+              file=sys.stderr)
+        body = panel
 
+    eye = R((head_c[0] + HEAD_LENGTH * 0.20, head_c[1] + HEAD_DIA * 0.12))
     body = body.cut(Part.makeCylinder(EYE_DIA / 2.0, BODY_THICKNESS + 2.0,
-                                      App.Vector(head_c[0] + HEAD_LENGTH * 0.20,
-                                                 head_c[1] + HEAD_DIA * 0.12, -1.0)))
+                                      App.Vector(eye[0], eye[1], -1.0)))
     body = _soften(body, WING_EDGE_R)   # skipped automatically if the lattice has too many edges
-    assert len(body.Solids) == 1, "body is %d solids" % len(body.Solids)
+    assert len(body.Solids) == 1, "body(%s) is %d solids" % (pose, len(body.Solids))
     return body
 
 
@@ -412,7 +461,7 @@ def _arm(sign):
     e = math.radians(ARM_ELEV)
     dy, dz = sign * math.cos(e), math.sin(e)      # arm axis
     ny, nz = -sign * math.sin(e), math.cos(e)     # arm normal
-    root = (sign * (SADDLE_HALF - 1.0), ARM_ROOT_Z)
+    root = (sign * (SADDLE_HALF - 2.5), ARM_ROOT_Z)   # embed the root well into the leg
     tip = (root[0] + ARM_LEN * dy, root[1] + ARM_LEN * dz)
     ht = ARM_TZ / 2.0
     quad = [(root[0] + ny * ht, root[1] + nz * ht),
@@ -560,21 +609,26 @@ def main():
     os.makedirs(out_dir, exist_ok=True)
 
     doc = App.newDocument("ParametricBird")
-    body = build_body()
+    body_level = build_body("level")
+    body_diving = build_body("diving")
     wing = build_wing()
     connector = build_connector()
 
     print("Printable pieces (footprint as exported, for a 350 x 350 Voron plate):")
-    for name, shape in (("bird_body", body), ("bird_wing", wing), ("bird_connector", connector)):
+    parts = (("bird_body", body_level), ("bird_body_diving", body_diving),
+             ("bird_wing", wing), ("bird_connector", connector))
+    for name, shape in parts:
         placed = _print_pose(name, shape)
         obj = doc.addObject("Part::Feature", name)
         obj.Shape = placed
         _export(out_dir, name, placed)
-    print("  (need 2x bird_wing + 1x bird_body + 1x bird_connector on the plate)")
+    body_name = "bird_body_diving" if BODY_POSE == "diving" else "bird_body"
+    print("  (need 2x bird_wing + 1x %s + 1x bird_connector on the plate)" % body_name)
     doc.recompute()
 
     asm = App.newDocument("ParametricBirdAssembly")
-    body_p, wings, conns = _posed(body, wing, connector)
+    preview_body = body_diving if BODY_POSE == "diving" else body_level
+    body_p, wings, conns = _posed(preview_body, wing, connector)
     named = [("Body", body_p), ("Wing_R", wings["R"]), ("Wing_L", wings["L"]),
              ("Connector", conns["main"])]
     for name, shape in named:

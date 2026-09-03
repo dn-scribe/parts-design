@@ -24,7 +24,7 @@ render; click the STL/GLB links in a part's own README to open GitHub's real 3D 
   <td><a href="designs/parametric-bird/"><img src="designs/parametric-bird/outputs/preview.png" width="160" alt="Parametric Bird preview" /></a></td>
   <td><a href="designs/parametric-bird/"><b>Parametric Bird</b></a><br /><code>parametric-bird</code></td>
   <td><code>make parametric-bird</code></td>
-  <td>Flat-plaque spread-wing bird — two grid-pattern wings that slot into one saddle connector riding on a flat-backed "arrow" body. Scaled so all four pieces fit one 350&nbsp;mm Voron plate.</td>
+  <td>Flat-plaque spread-wing bird — two grid-pattern wings that slot into one slim saddle connector riding on a flat-backed body (level or head-down "diving" version). Two master params: <code>WING_LENGTH</code> + <code>THICKNESS</code>.</td>
 </tr>
 <tr>
   <td><a href="designs/screen-bird-perch/"><img src="designs/screen-bird-perch/outputs/preview.png" width="160" alt="screen-bird-perch preview" /></a></td>
