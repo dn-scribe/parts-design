@@ -8,6 +8,12 @@ See [docs/agents-instructions.md](docs/agents-instructions.md) for repo conventi
 layout, and the build/validation workflow. Build a part with `make <name>` (needs FreeCAD —
 run `make install-freecad` first).
 
+## Tools
+
+- [Image → cookie cutter STL](docs/cookie-cutter/) — browser-only GitHub Pages tool (serve `docs/` as the
+  Pages root, page lives at `/cookie-cutter/`): pick an image, convert to B/W, set scale X/Y, blade
+  height/thickness and base thickness, download the STL.
+
 ## Parts
 
 GitHub markdown can't embed an interactive glTF/GLB viewer inline, so each row shows a static
