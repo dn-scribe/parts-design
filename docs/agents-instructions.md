@@ -291,6 +291,14 @@ part's silhouette to fuse into, a real FDM weak point. Pass `arm_clearance` expl
 required parameter, not derived) so the function can compute the target boss's true collar radius
 for its internal connector geometry.
 
+## Web tools (GitHub Pages)
+
+`docs/cookie-cutter/` is a static, dependency-free (three.js from CDN for the preview only) page
+that turns an image into a cookie-cutter STL in the browser. Not a FreeCAD design: no
+`generate.py`, not built by `make`. `cutter.js` holds the pure geometry (threshold -> signed
+distance -> heightfield -> STL) so it can be tested under node; `index.html` is UI only. Enable
+Pages with source "main / docs".
+
 ## Setup
 
 ```bash
