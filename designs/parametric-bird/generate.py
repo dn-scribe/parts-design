@@ -83,8 +83,8 @@ from freecad_common import export_glb, parse_outdir
 #   one 350 x 350 Voron plate (the build prints each part's footprint).
 #   WING_LENGTH ~95 -> the original palm-size bird.
 
-WING_LENGTH = 300.0   # wing span, root edge to tip (mm)
-THICKNESS = 3.2       # plaque / tongue / body-slab thickness for every part (mm)
+WING_LENGTH = 80.0   # wing span, root edge to tip (mm)
+THICKNESS = 1.4       # plaque / tongue / body-slab thickness for every part (mm)
 
 # Head pose: "level" (arrow, flying straight) or "diving" (head down, aiming at
 # food on the floor). Both bodies are always exported (bird_body,
