@@ -68,6 +68,12 @@ render; click the STL/GLB links in a part's own README to open GitHub's real 3D 
   <td><code>make samsung-c34-clip</code></td>
   <td>Saddle + counterweight tail for a thin, rounded, bezel-less monitor top edge (measured on a Samsung C34H89x — nothing to clamp). Prints as <b>one flat piece with two living hinges</b>: fold the ~50&nbsp;mm back tail down the monitor back (counterweight) and a short front flap over the front edge (backstop), and the saddle is trapped on the edge at any spot. No clamp, no adhesive, no pin. Same swivel cup + puck. Flat, cup-up, no supports.</td>
 </tr>
+<tr>
+  <td><a href="designs/avocado-musher/"><img src="designs/avocado-musher/outputs/preview.png" width="160" alt="avocado-musher preview" /></a></td>
+  <td><a href="designs/avocado-musher/"><b>Avocado Musher</b></a><br /><code>avocado-musher</code></td>
+  <td><code>make avocado-musher</code></td>
+  <td>Small 2-part hand masher/muddler — a flat-bottomed ribbed-top disc head (blind glue socket) plus a knurled-grip handle stick with a domed knob top. Parametric remake of a found reference model (kept in <code>original/</code>). Two parts, no supports.</td>
+</tr>
 </table>
 
 Add a row here (preview.png, folder name, `make <name>` command, one-line description) whenever
