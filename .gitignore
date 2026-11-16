@@ -1,6 +1,14 @@
 # FreeCAD backup files (auto-written next to .FCStd on save)
 *.FCBak
 
+# macOS Finder metadata
+.DS_Store
+
+# Scratch space for found/reference models - not part of any design's
+# committed outputs (see docs/agents-instructions.md: a design's own
+# original/ folder is for a kept reference model, this is just a drop zone)
+/tmp/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
